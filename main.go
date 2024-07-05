@@ -205,7 +205,7 @@ func summarizeCode(fileName, code string) string {
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: "deepseek-chat",
+			Model: "deepseek-coder",
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
