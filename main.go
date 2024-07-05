@@ -150,7 +150,7 @@ func ParseGitHubURL(url string) (GitHubRepo, error) {
 
 // isCodeFile checks if a file is a code file based on its extension.
 func isCodeFile(filename string) bool {
-	extensions := []string{".go", ".c", ".js", ".ts", ".php", ".cpp"}
+	extensions := []string{".go", ".py", ".c", ".js", ".ts", ".php", ".cpp"}
 	for _, ext := range extensions {
 		if strings.HasSuffix(filename, ext) {
 			return true
