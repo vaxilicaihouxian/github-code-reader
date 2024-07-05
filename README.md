@@ -43,3 +43,4 @@ go run main.go "https://github.com/xxl-job/xxl-job-executor-go"
 假设有一个处理 HTTP 请求的函数，可以使用这些常量来返回响应码：
 ...
 ```
+更多代码阅读解析md文件示例，请查看**examples/reader-markdowns/{repo}/code_summary.md**
