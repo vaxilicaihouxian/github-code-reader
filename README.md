@@ -27,7 +27,6 @@ go run main.go "https://github.com/xxl-job/xxl-job-executor-go"
 # xxl-job-executor-go
 很多公司java与go开发共存，java中有xxl-job做为任务调度引擎，为此也出现了go执行器(客户端)，使用起来比较简单：
 # 支持
-```	
 1.执行器注册
 2.耗时任务取消
 ...
@@ -43,5 +42,4 @@ go run main.go "https://github.com/xxl-job/xxl-job-executor-go"
 ### 示例应用
 假设有一个处理 HTTP 请求的函数，可以使用这些常量来返回响应码：
 ...
-
 ```
