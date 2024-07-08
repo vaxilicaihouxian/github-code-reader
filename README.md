@@ -1,25 +1,24 @@
-# github-code-reader
-LLM辅助阅读Github代码库
-1. 当前仅支持deepseek llm阅读代码
-## 准备
-1. github token
-2. deepseek api key（这个比较便宜，注册方便）: https://platform.deepseek.com/
-## 用法
+### Repository Summary
 
-```shell
-export GITHUB_TOKEN=你的githubToken，需要自己去github生成，用于读取github上的库
-export OPENAI_API_KEY=你的deepseek平台api key，当前只实现了用deepseek llm 阅读代码的功能
-go run main.go "https://github.com/{owner}/{仓库名}"
-```
+#### Purpose
+# xxl-job-executor-go
+Many companies coexist with both Java and Go development, where Java uses xxl-job as a task scheduling engine. Consequently, a Go executor (client) has emerged, which is relatively simple to use:
+# Support
+1. Executor registration
+2. Task cancellation for long-running tasks
+...
 
-会在当前目录下生成一个.txt文件，包含代码解读结果
+### Features and Implementation Details
+- **Constant Declarations**:
+  - Constants are defined using the `const` keyword. They cannot be modified after declaration, ensuring code safety and stability.
+  - Constant names follow camelCase, such as `SuccessCode` and `FailureCode`, which are self-explanatory and facilitate understanding.
 
-### 示例
-```
-go run main.go "https://github.com/xxl-job/xxl-job-executor-go"
-```
+- **Response Codes**:
+  - These constants are typically used in network request response handling, aiding developers in quickly determining the outcome of a request.
+  - In practical applications, these constants can dictate subsequent business logic, such as performing certain actions upon success or handling errors/retries upon failure.
 
-输出文件**code_summary.txt**，文件大概内容如下
+### Example Application
+Suppose there is a function handling HTTP requests, which can use these constants to return response codes:
 ```md
 ### Repository Summary
 
