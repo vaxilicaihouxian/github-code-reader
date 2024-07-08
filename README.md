@@ -1,24 +1,34 @@
-### Repository Summary
+# GitHub Code Reader
 
-#### Purpose
-# xxl-job-executor-go
-Many companies coexist with both Java and Go development, where Java uses xxl-job as a task scheduling engine. Consequently, a Go executor (client) has emerged, which is relatively simple to use:
-# Support
-1. Executor registration
-2. Task cancellation for long-running tasks
-...
+LLM-assisted reading of GitHub code repositories.
 
-### Features and Implementation Details
-- **Constant Declarations**:
-  - Constants are defined using the `const` keyword. They cannot be modified after declaration, ensuring code safety and stability.
-  - Constant names follow camelCase, such as `SuccessCode` and `FailureCode`, which are self-explanatory and facilitate understanding.
+## Features
 
-- **Response Codes**:
-  - These constants are typically used in network request response handling, aiding developers in quickly determining the outcome of a request.
-  - In practical applications, these constants can dictate subsequent business logic, such as performing certain actions upon success or handling errors/retries upon failure.
+- Currently supports code reading using DeepSeek LLM.
 
-### Example Application
-Suppose there is a function handling HTTP requests, which can use these constants to return response codes:
+## Prerequisites
+
+1. GitHub token
+2. DeepSeek API key (affordable and easy to register): [DeepSeek Platform](https://platform.deepseek.com/)
+
+## Usage
+
+```shell
+export GITHUB_TOKEN=your_github_token # Generate this token on GitHub to access repositories
+export OPENAI_API_KEY=your_deepseek_api_key # Currently supports DeepSeek LLM for code reading
+go run main.go "https://github.com/{owner}/{repository_name}"
+```
+
+A `.txt` file containing the code interpretation results will be generated in the current directory.
+
+### Example
+
+```shell
+go run main.go "https://github.com/xxl-job/xxl-job-executor-go"
+```
+
+Output file: **code_summary.txt**
+
 ```md
 ### Repository Summary
 
@@ -42,4 +52,5 @@ Suppose there is a function handling HTTP requests, which can use these constant
 假设有一个处理 HTTP 请求的函数，可以使用这些常量来返回响应码：
 ...
 ```
-更多代码阅读解析md文件示例，请查看**examples/reader-markdowns/{repo}/code_summary.md**
+
+For more examples of code reading and analysis in Markdown files, please refer to **examples/reader-markdowns/{repo}/code_summary.md**.
