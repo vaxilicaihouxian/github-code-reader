@@ -49,11 +49,20 @@ func GetFileContent(client *github.Client, repo GitHubRepo, filePath string) (st
 	return content, nil
 }
 
+type SummarizeResult struct {
+	Readme              string
+	StructureText       string
+	StructureDetailText string
+	ALLInOne            string
+}
+
 // SummarizeRepository generates a summary of the repository's structure and purpose.
-func SummarizeRepository(readmeContent string, repo GitHubRepo, client *github.Client) (string, error) {
+func SummarizeRepository(readmeContent string, repo GitHubRepo, client *github.Client) (SummarizeResult, error) {
+	sr := SummarizeResult{}
+	sr.Readme = readmeContent
 	structure, structureDetail, err := getStructure(client, repo, "", 0, MaxLLMInputLength)
 	if err != nil {
-		return "", err
+		return sr, err
 	}
 
 	summary := "### Repository Summary\n\n"
@@ -68,41 +77,19 @@ func SummarizeRepository(readmeContent string, repo GitHubRepo, client *github.C
 	summary += "\n\n#### Structure Detail\n"
 	summary += structureDetail
 
-	return summary, nil
+	sr.StructureText = structure
+	sr.StructureDetailText = structureDetail
+	sr.ALLInOne = summary
+	return sr, nil
 }
 
-//// getStructure recursively retrieves the directory structure and returns it as a formatted string.
-//func getStructure(client *github.Client, repo GitHubRepo, path string, level int) (string, error) {
-//	contents, err := GetRepositoryContents(client, repo, path)
-//	if err != nil {
-//		return "", err
-//	}
-//
-//	var structure strings.Builder
-//	indent := strings.Repeat("  ", level)
-//	for _, content := range contents {
-//		structure.WriteString(fmt.Sprintf("%s- %s\n", indent, content.GetName()))
-//		if content.GetType() == "dir" {
-//			subStructure, err := getStructure(client, repo, content.GetPath(), level+1)
-//			if err != nil {
-//				return "", err
-//			}
-//			structure.WriteString(subStructure)
-//		}
-//	}
-//
-//	return structure.String(), nil
-//}
+const CodeSummaryALLInOneFName = "./code_summary.txt"
+const CodeSummaryReadmeFName = "./code_readme.txt"
+const CodeSummaryStructureFName = "./code_structure.txt"
+const CodeSummaryStructureDetailFName = "./code_structure_detail.txt"
 
 func main() {
-	// read repo url from command argument
-	repoURL := os.Args[1]
-	// parse repo url to GitHubRepo
-	repo, err0 := ParseGitHubURL(repoURL)
-	if err0 != nil {
-		fmt.Printf("Error parsing repo url: %v\n", err0)
-		return
-	}
+
 	// Replace with your GitHub token
 	token := os.Getenv("GITHUB_TOKEN")
 	maxLLMInputLength := os.Getenv("LLM_MAX_INPUT_LENGTH")
@@ -127,7 +114,63 @@ func main() {
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
+	cmd := os.Args[1]
 
+	if cmd == "summary" {
+		Summary(client)
+		return
+	}
+	if cmd == "refine" {
+		Refine(client)
+		return
+	}
+	fmt.Println("Missing Correct cmd: summary or refine.")
+}
+func RecoverFromFile() SummarizeResult {
+	sr := SummarizeResult{}
+	if txt, err := os.ReadFile(CodeSummaryALLInOneFName); err == nil {
+		sr.ALLInOne = string(txt)
+	} else {
+		fmt.Println("Read all in one failed,err:", err)
+	}
+	if txt, err := os.ReadFile(CodeSummaryReadmeFName); err == nil {
+		sr.Readme = string(txt)
+	} else {
+		fmt.Println("Read readme failed,err:", err)
+	}
+	if txt, err := os.ReadFile(CodeSummaryStructureFName); err == nil {
+		sr.StructureText = string(txt)
+	} else {
+		fmt.Println("Read structure failed,err:", err)
+	}
+	if txt, err := os.ReadFile(CodeSummaryStructureDetailFName); err == nil {
+		sr.StructureDetailText = string(txt)
+	} else {
+		fmt.Println("Read structure detail failed,err:", err)
+	}
+	return sr
+}
+func Refine(client *github.Client) {
+	sr := RecoverFromFile()
+	if sr.StructureDetailText == "" {
+		fmt.Println("missing structure detail")
+		return
+	}
+}
+
+func Summary(client *github.Client) {
+	// read repo url from command argument
+	repoURL := os.Args[2]
+	// parse repo url to GitHubRepo
+	repo, err0 := ParseGitHubURL(repoURL)
+	if err0 != nil {
+		fmt.Printf("Error parsing repo url: %v\n", err0)
+		return
+	}
+	SummaryRepo(client, repo)
+}
+
+func SummaryRepo(client *github.Client, repo GitHubRepo) {
 	readmeContent, err := GetFileContent(client, repo, "README.md")
 	if err != nil {
 		fmt.Printf("Error getting README content: %v\n", err)
@@ -141,9 +184,18 @@ func main() {
 	}
 
 	fmt.Println(summary)
-	f, err := os.Create("./code_summary.txt")
-	f.WriteString(summary)
-	f.Close()
+	f0, _ := os.Create(CodeSummaryALLInOneFName)
+	f0.WriteString(summary.ALLInOne)
+	f0.Close()
+	f1, _ := os.Create(CodeSummaryReadmeFName)
+	f1.WriteString(summary.Readme)
+	f1.Close()
+	f2, _ := os.Create(CodeSummaryStructureFName)
+	f2.WriteString(summary.StructureText)
+	f2.Close()
+	f3, _ := os.Create(CodeSummaryStructureDetailFName)
+	f3.WriteString(summary.StructureDetailText)
+	f3.Close()
 }
 
 // ParseGitHubURL parses a GitHub repository URL and extracts the owner and repo name.
