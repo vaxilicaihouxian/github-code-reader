@@ -16,7 +16,7 @@ LLM-assisted reading of GitHub code repositories.
 ```shell
 export GITHUB_TOKEN=your_github_token # Generate this token on GitHub to access repositories
 export OPENAI_API_KEY=your_deepseek_api_key # Currently supports DeepSeek LLM for code reading
-go run main.go "https://github.com/{owner}/{repository_name}"
+go run main.go summary "https://github.com/{owner}/{repository_name}"
 ```
 
 A `.txt` file containing the code interpretation results will be generated in the current directory.
@@ -24,7 +24,7 @@ A `.txt` file containing the code interpretation results will be generated in th
 ### Example
 
 ```shell
-go run main.go "https://github.com/xxl-job/xxl-job-executor-go"
+go run main.go summary "https://github.com/xxl-job/xxl-job-executor-go"
 ```
 
 Output file: **code_summary.txt**

@@ -9,14 +9,14 @@ LLM辅助阅读Github代码库
 ```shell
 export GITHUB_TOKEN=你的githubToken，需要自己去github生成，用于读取github上的库
 export OPENAI_API_KEY=你的deepseek平台api key，当前只实现了用deepseek llm 阅读代码的功能
-go run main.go "https://github.com/{owner}/{仓库名}"
+go run main.go summary "https://github.com/{owner}/{仓库名}"
 ```
 
 会在当前目录下生成一个.txt文件，包含代码解读结果
 
 ### 示例
 ```
-go run main.go "https://github.com/xxl-job/xxl-job-executor-go"
+go run main.go summary "https://github.com/xxl-job/xxl-job-executor-go"
 ```
 
 输出文件**code_summary.txt**，文件大概内容如下
