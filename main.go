@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v45/github"
-	"github.com/sashabaranov/go-openai"
-	"golang.org/x/oauth2"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/google/go-github/v45/github"
+	"github.com/sashabaranov/go-openai"
+	"golang.org/x/oauth2"
 )
 
 var MaxLLMInputLength = 4096
@@ -50,7 +51,7 @@ func GetFileContent(client *github.Client, repo GitHubRepo, filePath string) (st
 
 // SummarizeRepository generates a summary of the repository's structure and purpose.
 func SummarizeRepository(readmeContent string, repo GitHubRepo, client *github.Client) (string, error) {
-	structure, err := getStructure(client, repo, "", 0, MaxLLMInputLength)
+	structure, structureDetail, err := getStructure(client, repo, "", 0, MaxLLMInputLength)
 	if err != nil {
 		return "", err
 	}
@@ -59,7 +60,13 @@ func SummarizeRepository(readmeContent string, repo GitHubRepo, client *github.C
 	summary += "#### Purpose\n"
 	summary += readmeContent + "\n\n"
 	summary += "#### Structure\n"
+	beautyStructure, sErr := beautyFileStructureASCII(structure)
+	if sErr == nil {
+		structure = beautyStructure
+	}
 	summary += structure
+	summary += "\n\n#### Structure Detail\n"
+	summary += structureDetail
 
 	return summary, nil
 }
@@ -160,39 +167,76 @@ func isCodeFile(filename string) bool {
 }
 
 // getStructure recursively retrieves the directory structure and returns it as a formatted string.
-func getStructure(client *github.Client, repo GitHubRepo, path string, level int, maxLength int) (string, error) {
+func getStructure(client *github.Client, repo GitHubRepo, path string, level int, maxLength int) (string, string, error) {
 	contents, err := GetRepositoryContents(client, repo, path)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
+	var structureDetail strings.Builder
 	var structure strings.Builder
 	indent := strings.Repeat("  ", level)
 	for _, content := range contents {
 		structure.WriteString(fmt.Sprintf("%s- %s\n", indent, content.GetName()))
+		structureDetail.WriteString(fmt.Sprintf("%s- %s\n", indent, content.GetName()))
 		if content.GetType() == "dir" {
-			subStructure, err := getStructure(client, repo, content.GetPath(), level+1, maxLength)
+			subStructure, subStructureDetail, err := getStructure(client, repo, content.GetPath(), level+1, maxLength)
 			if err != nil {
-				return "", err
+				return "", "", err
 			}
 			structure.WriteString(subStructure)
+			structureDetail.WriteString(subStructureDetail)
 		} else {
 			if isCodeFile(content.GetName()) {
 				code, err := GetFileContent(client, repo, content.GetPath())
 				if err != nil {
-					return "", err
+					return "", "", err
 				}
 				if len(code) > maxLength {
-					structure.WriteString(fmt.Sprintf("%s  [File too long to summarize]\n", indent))
+					structureDetail.WriteString(fmt.Sprintf("%s  [File too long to summarize]\n", indent))
 				} else {
 					summary := summarizeCode(content.GetName(), code)
-					structure.WriteString(fmt.Sprintf("%s  %s\n", indent, summary))
+					structureDetail.WriteString(fmt.Sprintf("%s  %s\n", indent, summary))
 				}
 			}
 		}
 	}
 
-	return structure.String(), nil
+	return structure.String(), structureDetail.String(), nil
+}
+
+// beautyFileStructureASCII 利用LLM转换输出好看的文件结构图，ascii风格
+func beautyFileStructureASCII(code string) (string, error) {
+	config := openai.DefaultConfig(LLMAuthorizationToken)
+	config.BaseURL = "https://api.deepseek.com"
+	client := openai.NewClientWithConfig(config)
+	prompt := `请你将以下源代码文件列表整理成漂亮的ASCII风格的文件结构图: \n\n%s`
+	resp, err := client.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model: "deepseek-coder",
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: "You are a helpful assistant.Use Chinese to answer questions.",
+				},
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: fmt.Sprintf(prompt, code),
+				},
+			},
+		},
+	)
+
+	if err != nil {
+		fmt.Println("ChatCompletion error: ", err)
+		return "", fmt.Errorf("ChatCompletion error: %v", err)
+	}
+
+	// Simulate LLM call - replace with actual LLM call logic
+	result := fmt.Sprintf("%s", resp.Choices[0].Message.Content)
+	fmt.Println("beautyFileStructureASCII result:", "---------------\n\n", result, "\n\n---------------\n\n")
+	return result, nil
 }
 
 // summarizeCode is a placeholder function to simulate calling an LLM to summarize code.
@@ -201,7 +245,7 @@ func summarizeCode(fileName, code string) string {
 	config := openai.DefaultConfig(LLMAuthorizationToken)
 	config.BaseURL = "https://api.deepseek.com"
 	client := openai.NewClientWithConfig(config)
-	prompt := `总结以下代码文件内容，尽可能详细讲解功能和实现细节，便于读者学习阅读该代码: %s`
+	prompt := `总结以下代码文件内容，尽可能详细讲解功能和实现细节，便于读者学习阅读该代码: \n\n%s`
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
