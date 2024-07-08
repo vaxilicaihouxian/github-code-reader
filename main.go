@@ -9,8 +9,14 @@ import (
 
 	"github.com/google/go-github/v45/github"
 	"github.com/sashabaranov/go-openai"
+	"github.com/tmc/langchaingo/chains"
+	"github.com/tmc/langchaingo/documentloaders"
+	langchainOpenai "github.com/tmc/langchaingo/llms/openai"
+	"github.com/tmc/langchaingo/textsplitter"
 	"golang.org/x/oauth2"
 )
+
+const DeepSeekBaseURL = "https://api.deepseek.com"
 
 var MaxLLMInputLength = 4096
 var LLMAuthorizationToken = os.Getenv("OPENAI_API_KEY")
@@ -87,6 +93,7 @@ const CodeSummaryALLInOneFName = "./code_summary.txt"
 const CodeSummaryReadmeFName = "./code_readme.txt"
 const CodeSummaryStructureFName = "./code_structure.txt"
 const CodeSummaryStructureDetailFName = "./code_structure_detail.txt"
+const CodeRefineFName = "./code_refine.txt"
 
 func main() {
 
@@ -156,6 +163,26 @@ func Refine(client *github.Client) {
 		fmt.Println("missing structure detail")
 		return
 	}
+	ctx := context.Background()
+
+	llm, err := langchainOpenai.New(langchainOpenai.WithBaseURL(DeepSeekBaseURL))
+	if err != nil {
+		fmt.Println("create llm client failed,err:", err)
+		return
+	}
+	llmSummarizationChain := chains.LoadRefineSummarization(llm)
+	docs, err := documentloaders.NewText(strings.NewReader(sr.StructureDetailText)).LoadAndSplit(ctx,
+		textsplitter.NewRecursiveCharacter(),
+	)
+	outputValues, err := chains.Call(ctx, llmSummarizationChain, map[string]any{"input_documents": docs})
+	if err != nil {
+		fmt.Println("call summary chain failed,err:", err)
+	}
+	out := outputValues["text"].(string)
+	fmt.Println("refine output:", out)
+	f, _ := os.Create(CodeRefineFName)
+	f.WriteString(out)
+	f.Close()
 }
 
 func Summary(client *github.Client) {
@@ -295,7 +322,7 @@ func beautyFileStructureASCII(code string) (string, error) {
 func summarizeCode(fileName, code string) string {
 	fmt.Println("Summarizing code for", fileName)
 	config := openai.DefaultConfig(LLMAuthorizationToken)
-	config.BaseURL = "https://api.deepseek.com"
+	config.BaseURL = DeepSeekBaseURL
 	client := openai.NewClientWithConfig(config)
 	prompt := `总结以下代码文件内容，尽可能详细讲解功能和实现细节，便于读者学习阅读该代码: \n\n%s`
 	resp, err := client.CreateChatCompletion(
