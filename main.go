@@ -17,6 +17,8 @@ import (
 )
 
 const DeepSeekBaseURL = "https://api.deepseek.com"
+const ModelDeepSeekChat = "deepseek-chat"
+const ModelDeepSeekCoder = "deepseek-coder"
 
 var MaxLLMInputLength = 4096
 var LLMAuthorizationToken = os.Getenv("OPENAI_API_KEY")
@@ -165,18 +167,22 @@ func Refine(client *github.Client) {
 	}
 	ctx := context.Background()
 
-	llm, err := langchainOpenai.New(langchainOpenai.WithBaseURL(DeepSeekBaseURL))
+	llm, err := langchainOpenai.New(
+		langchainOpenai.WithBaseURL(DeepSeekBaseURL),
+		langchainOpenai.WithModel(ModelDeepSeekChat),
+	)
 	if err != nil {
 		fmt.Println("create llm client failed,err:", err)
 		return
 	}
 	llmSummarizationChain := chains.LoadRefineSummarization(llm)
 	docs, err := documentloaders.NewText(strings.NewReader(sr.StructureDetailText)).LoadAndSplit(ctx,
-		textsplitter.NewRecursiveCharacter(),
+		textsplitter.NewRecursiveCharacter(textsplitter.WithChunkSize(MaxLLMInputLength)),
 	)
 	outputValues, err := chains.Call(ctx, llmSummarizationChain, map[string]any{"input_documents": docs})
 	if err != nil {
 		fmt.Println("call summary chain failed,err:", err)
+		return
 	}
 	out := outputValues["text"].(string)
 	fmt.Println("refine output:", out)
@@ -328,7 +334,7 @@ func summarizeCode(fileName, code string) string {
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: "deepseek-coder",
+			Model: ModelDeepSeekCoder,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
